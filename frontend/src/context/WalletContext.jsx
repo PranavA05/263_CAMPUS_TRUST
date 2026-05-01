@@ -2,21 +2,15 @@
 // PURPOSE: Manages the global state for MetaMask wallet connection and user account.
 
 import React, { createContext, useState, useEffect } from 'react';
-
 export const WalletContext = createContext();
-
 export const WalletProvider = ({ children }) => {
   const [currentAccount, setCurrentAccount] = useState("");
-
-  // Check if MetaMask is installed and if an account is already connected
   const checkIfWalletIsConnected = async () => {
     try {
       if (!window.ethereum) return alert("Please install MetaMask.");
-
       const accounts = await window.ethereum.request({ method: "eth_accounts" });
-
       if (accounts.length) {
-        setCurrentAccount(accounts);
+        setCurrentAccount(accounts[0]); // FIX: store single address, not the whole array
       } else {
         console.log("No authorized account found");
       }
@@ -25,13 +19,11 @@ export const WalletProvider = ({ children }) => {
     }
   };
 
-  // Prompt the user to connect their MetaMask wallet
   const connectWallet = async () => {
     try {
       if (!window.ethereum) return alert("Please install MetaMask.");
-
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      setCurrentAccount(accounts);
+      setCurrentAccount(accounts[0]); // FIX: store single address, not the whole array
     } catch (error) {
       console.error(error);
       throw new Error("No ethereum object.");
@@ -40,6 +32,12 @@ export const WalletProvider = ({ children }) => {
 
   useEffect(() => {
     checkIfWalletIsConnected();
+    //update if the user switches accounts in MetaMask
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", (accounts) => {
+        setCurrentAccount(accounts[0] || "");
+      }); 
+    }
   }, []);
 
   return (

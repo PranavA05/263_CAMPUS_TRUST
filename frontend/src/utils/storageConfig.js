@@ -1,29 +1,26 @@
 // src/utils/storageConfig.js
 export const uploadImageToIPFS = async (file) => {
-  if (!file) throw new Error("No file provided for upload");
-
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-
+  if (!file) throw new Error("File object is missing!");
+  const jwt = import.meta.env.VITE_PINATA_JWT;
+  if (!jwt) throw new Error("Pinata JWT not found in .env file");
+  const formData = new FormData();
+  formData.append("file", file);
+  try { // Upload file to Pinata
     const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_PINATA_JWT}`,
+        Authorization: `Bearer ${jwt.trim()}`,
       },
       body: formData,
     });
+    if (!res.ok) { 
+      const errorData = await res.json();
+      throw new Error(`Pinata Error: ${errorData.error.details || "Invalid Format"}`);
+    }
 
-    const resData = await res.json();
-    
-    // Construct the IPFS gateway URL using Pinata's gateway
-    const imageUrl = `https://gateway.pinata.cloud/ipfs/${resData.IpfsHash}`;
-    
-    console.log("Stored file with CID:", resData.IpfsHash);
-    return imageUrl;
-
+    const data = await res.json();
+    return data.IpfsHash; // Return the CID for blockchain storage
   } catch (error) {
-    console.error("Error uploading to Pinata:", error);
     throw error;
   }
 };
